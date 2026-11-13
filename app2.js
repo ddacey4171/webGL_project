@@ -1,13 +1,18 @@
+const { mat4 } = glMatrix;
+
 var vertexshaderText = [
   'precision mediump float;',
   '',
-  'attribute vec2 vertPosition;',
+  'attribute vec3 vertPosition;',
   'attribute vec3 vertColor;',
   'varying vec3 fragColor;', 
+  'uniform mat4 mWorld;',
+  'uniform mat4 mView;',
+  'uniform mat4 mProj;',
   '',
   'void main() {',
     '  fragColor = vertColor;',
-  '  gl_Position = vec4(vertPosition, 0.0, 1.0);',
+  '  gl_Position = mProj * mView * mWorld * vec4(vertPosition, 0.0, 1.0);',
   '}'
 ].join("\n");
 
@@ -76,13 +81,10 @@ var initDemo = function() {
   }
 
   
-  var triangleVertices = [ // x, y.   r,g,b
-    0.0, 0.5,   1,1,0, // Top vertex
-    -0.5, -0.5, 0,1,1, // Bottom left vertex
-    0.5, -0.5, 1,0,1, // Bottom right vertex
-    -1,-1, 0,0,0,
-    1,-1, 0,0,0,
-    1,1, 0,0,0,
+  var triangleVertices = [ // x, y, z,   r,g,b
+    0.0, 0.5, 0.0, 1,1,0, // Top vertex
+    -0.5, -0.5, 0.0, 0,1,1, // Bottom left vertex
+    0.5, -0.5, 0.0, 1,0,1, // Bottom right vertex
   ];
 
   var triangleVertexBufferObject = gl.createBuffer();
@@ -95,10 +97,10 @@ var initDemo = function() {
 
   gl.vertexAttribPointer(
     positionAttributeLocation, // attribute location
-    2, // number of elements per attribute
+    3, // number of elements per attribute
     gl.FLOAT, // type of elements
     gl.FALSE,
-    5 * Float32Array.BYTES_PER_ELEMENT, // size of individual vertex
+    6 * Float32Array.BYTES_PER_ELEMENT, // size of individual vertex
     0 // offset from the beginning of each vertex to this attribute  
   );
   gl.vertexAttribPointer(
@@ -106,15 +108,34 @@ var initDemo = function() {
     3, // number of elements per attribute
     gl.FLOAT, // type of elements
     gl.FALSE,
-    5 * Float32Array.BYTES_PER_ELEMENT, // size of individual vertex
-    2 * Float32Array.BYTES_PER_ELEMENT// offset from the beginning of each vertex to this attribute
+    6 * Float32Array.BYTES_PER_ELEMENT, // size of individual vertex
+    3 * Float32Array.BYTES_PER_ELEMENT// offset from the beginning of each vertex to this attribute
   );
   gl.enableVertexAttribArray(positionAttributeLocation);
   gl.enableVertexAttribArray(colorAttributeLocation);
 
+  // tell webGL which program to use and it should be active
+    gl.useProgram(program);
 
+  var matWorldUniformLocation = gl.getUniformLocation(program, "mWorld");
+  var matViewUniformLocation = gl.getUniformLocation(program, "mView");
+  var matProjUniformLocation = gl.getUniformLocation(program, "mProj");
+
+  var projectionMatrix = new Float32Array(16);
+  var viewMatrix = new Float32Array(16);
+  var worldMatrix = new Float32Array(16);
+  mat4.identity(worldMatrix);
+  mat4.lookAt(viewMatrix, [0, 0, -5], [0, 0, 0], [0, 1, 0]);//this is the camra [camra position], [where it is looking], [up vector/ what is up]
+  mat4.perspective(projectionMatrix, glMath.toRadians(45), 1, 10000, 0.1);
+
+  gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
+  gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
+  gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projectionMatrix);
+
+  //
   // main render loop
-  gl.useProgram(program);
+  //
+
   gl.drawArrays(gl.TRIANGLES, 0, 3);
-  gl.drawArrays(gl.TRIANGLES, 3, 3);
+
 };
